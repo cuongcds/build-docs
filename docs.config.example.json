@@ -1,0 +1,35 @@
+{
+  "site": {
+    "name": "Docs",
+    "titleSuffix": "My Project Docs",
+    "lang": "en",
+    "homeTitle": "My Project Documentation",
+    "homeLead": "One-line description shown under the home page title."
+  },
+  "output": "path/to/output-folder",
+  "theme": {
+    "css": "./theme.example.css",
+    "fontUrl": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+  },
+  "logo": "path/to/logo.png",
+  "favicon": "path/to/favicon.ico",
+  "sections": [
+    {
+      "id": "guides",
+      "title": "Guides",
+      "description": "Short text shown on this section's home card.",
+      "dir": "path/to/markdown-folder",
+      "index": "path/to/markdown-folder/README.md",
+      "indexTitle": "Overview",
+      "exclude": ["CHANGELOG.md"],
+      "last": ["appendix.md"]
+    },
+    {
+      "id": "reference",
+      "title": "Reference",
+      "description": "A second doc folder; add as many sections as you need.",
+      "dir": "path/to/another-markdown-folder",
+      "assets": ["path/to/downloadable-files"]
+    }
+  ]
+}

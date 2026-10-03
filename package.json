@@ -1,0 +1,13 @@
+{
+  "name": "build-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "highlight.js": "^11.10.0",
+    "marked": "^14.1.0"
+  }
+}
