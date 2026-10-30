@@ -42,6 +42,7 @@ const site = {
 need(cfg.output, '"output" is required');
 need(Array.isArray(cfg.sections) && cfg.sections.length, '"sections" must be a non-empty array');
 const OUT = at(cfg.output);
+const CLEAN_URLS = cfg.cleanUrls === true;
 const THEME = at(cfg.theme?.css);
 const FONT_URL = cfg.theme?.fontUrl || "";
 const LOGO = at(cfg.logo);
@@ -63,6 +64,14 @@ const sections = cfg.sections.map((s) => {
 });
 
 // ---------- helpers ----------
+// With "cleanUrls", pages are written as <dir>/index.html and linked as <dir>/ (no ".html").
+const pageOut = (dir, name) => (CLEAN_URLS ? `${dir}/${name}/index.html` : `${dir}/${name}.html`);
+const toUrl = (out) => (CLEAN_URLS ? out.replace(/(^|\/)index\.html$/, "$1") : out);
+function relUrl(fromDir, out) {
+  const target = toUrl(out);
+  if (target === out) return path.posix.relative(fromDir, out);
+  return (path.posix.relative(fromDir, target) || ".") + "/";
+}
 const key = (p) => path.resolve(p).replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
 const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -125,7 +134,7 @@ for (const s of sections) {
     addPage({
       src: path.join(s.dir, f),
       section: s.id,
-      out: `${s.id}/${f.replace(/\.md$/, ".html")}`,
+      out: pageOut(s.id, f.replace(/\.md$/, "")),
       last: s.last.includes(f),
       fallbackTitle: f,
     });
@@ -158,9 +167,11 @@ function renderPage(page) {
     if (!href || href.startsWith("#") || /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return { href };
     const [p, hash] = href.split("#");
     const abs = path.resolve(path.dirname(page.src), p);
-    const target = (byKey.get(key(abs)) || dirHome.get(key(abs)))?.out || assets.get(key(abs))?.out;
+    const targetPage = byKey.get(key(abs)) || dirHome.get(key(abs));
+    const target = targetPage?.out || assets.get(key(abs))?.out;
     if (!target) return { dead: true };
-    return { href: path.posix.relative(outDir, target) + (hash ? "#" + hash : "") };
+    const rel = targetPage ? relUrl(outDir, target) : path.posix.relative(outDir, target);
+    return { href: rel + (hash ? "#" + hash : "") };
   };
 
   const md = new Marked({
@@ -200,7 +211,7 @@ function renderPage(page) {
 // ---------- templates ----------
 function sidebar(page) {
   const outDir = path.posix.dirname(page.out);
-  const href = (p) => path.posix.relative(outDir, p.out);
+  const href = (p) => relUrl(outDir, p.out);
   const item = (p, cls = "") =>
     `<li class="${cls}"><a href="${href(p)}"${p === page ? ' aria-current="page"' : ""}>${esc(p.title)}</a></li>`;
 
@@ -244,7 +255,7 @@ ${FAVICON ? `<link rel="icon" type="image/x-icon" href="${rootRel}/assets/favico
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
   <button class="menu-btn" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">&#9776;</button>
-  <a class="brand" href="${rootRel}/index.html">${LOGO ? `<img src="${rootRel}/assets/logo.png" alt="" height="28">` : ""}<span>${esc(site.name)}</span></a>
+  <a class="brand" href="${CLEAN_URLS ? rootRel + "/" : rootRel + "/index.html"}">${LOGO ? `<img src="${rootRel}/assets/logo.png" alt="" height="28">` : ""}<span>${esc(site.name)}</span></a>
   <div class="search">
     <input id="q" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
     <ul id="results" hidden></ul>
@@ -267,7 +278,7 @@ function homePage() {
     .map((s) => {
       const home = sectionHome(s);
       const n = pages.filter((p) => p.section === s.id).length;
-      return `<a class="card" href="${home.out}"><h2>${esc(s.title)}</h2><p>${esc(s.description || "")}</p><span class="meta">${n} pages &rarr;</span></a>`;
+      return `<a class="card" href="${toUrl(home.out)}"><h2>${esc(s.title)}</h2><p>${esc(s.description || "")}</p><span class="meta">${n} pages &rarr;</span></a>`;
     })
     .join("\n");
   return `<div class="hero">
@@ -300,7 +311,7 @@ for (const page of pages) {
     .replace(/&[a-z#0-9]+;/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  index.push({ t: page.title, u: page.out, s: titleOf.get(page.section), x: text.slice(0, 4000).toLowerCase() });
+  index.push({ t: page.title, u: toUrl(page.out), s: titleOf.get(page.section), x: text.slice(0, 4000).toLowerCase() });
   write(page.out, layout({ title: page.title, outPath: page.out, body: html, toc, nav: sidebar(page) }));
 }
 write("index.html", layout({ title: "Home", outPath: "index.html", body: homePage(), wide: true }));

@@ -1,0 +1,29 @@
+// Template for a build-<name>.mjs wrapper around build.mjs.
+// Copy to build-<name>.mjs, point CONFIG/OUT at your config file and output, adjust KEEP.
+// Run with: node build-<name>.mjs
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+// Config of this build; all paths inside it are relative to its own folder.
+const CONFIG = path.join(here, "docs-<name>.config.json");
+// Must match "output" in the config (used only for post-processing below).
+const OUT = path.resolve(here, "../../path/to/output");
+
+// Optional: asset folders (copied by the config's "assets") that should only keep some files.
+// Key = folder relative to OUT, value = file names to keep. Leave {} to skip.
+const KEEP = {
+  // "reference/api": ["openapi.yaml"],
+};
+
+execFileSync(process.execPath, [path.join(here, "build.mjs"), "--config", CONFIG], { stdio: "inherit" });
+
+for (const [folder, keep] of Object.entries(KEEP)) {
+  const dir = path.join(OUT, folder);
+  for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+    if (!keep.includes(f)) fs.rmSync(path.join(dir, f), { recursive: true, force: true });
+  }
+}
